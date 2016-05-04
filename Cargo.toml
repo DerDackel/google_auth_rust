@@ -1,0 +1,9 @@
+[package]
+name = "google_auth"
+version = "0.1.0"
+authors = ["Sebastian Jackel <sebastianjackel@gmail.com>"]
+
+[dependencies]
+rand = "0.3"
+base32 = "0.3"
+rust-crypto = "0.2"
