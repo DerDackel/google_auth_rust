@@ -1,6 +1,3 @@
-
-
-
 struct AuthKey {
     key: String,
 }
