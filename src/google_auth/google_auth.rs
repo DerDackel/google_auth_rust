@@ -1,5 +1,0 @@
-struct AuthKey {
-    key: String,
-}
-
-
