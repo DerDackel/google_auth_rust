@@ -11,7 +11,6 @@ use chrono::{UTC};
 use google_auth::*;
 
 fn main() {
-    create_credentials();
     let args: Vec<_> = env::args().collect();
     if args.len() < 3 {
         println!("Usage: google_auth KEY TIMESTAMP");
@@ -30,6 +29,7 @@ fn main() {
         } else {
             UTC::now().timestamp()
         };
-    println!("Code should be '{}' at T {}", google_auth::calculate_code(google_auth::decode_key(args[1].to_string()).as_slice(), at_time), at_time);
-    println!("Logged in: {}", google_auth::validate_code(AuthKey {key: args[1].clone()}, at_time, code));
+    let auth = google_auth::default();
+    println!("Code should be '{}' at T {}", auth.calculate_code(auth.decode_secret_key(args[1].to_string()).as_slice(), at_time), at_time);
+    println!("Logged in: {}", auth.validate_code(AuthKey {key: args[1].clone()}, at_time, code));
 }
