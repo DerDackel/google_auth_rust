@@ -47,7 +47,7 @@ impl Authenticator for TOTPAuthenticator {
             Err(e) => panic!("Failed to obtain OS RNG: {}", e)
         };
 
-        let mut buffer: Vec<u8> = Vec::with_capacity((self.config.secret_bits/5) as usize);
+        let mut buffer: Vec<u8> = Vec::with_capacity((self.config.secret_bits/8) as usize);
         //let mut buffer: [u8; (self.config.secret_bits as u32/5) as usize] = [0; (self.config.secret_bits/5) as usize];
         rng.fill_bytes(&mut buffer);
         AuthKey {key: self.encode_secret_key(buffer)}
