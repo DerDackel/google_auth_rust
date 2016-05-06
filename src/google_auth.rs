@@ -110,7 +110,7 @@ fn dyn_truncate(hash: &[u8]) -> u32 {
 }
 
 
-
+#[cfg(test)]
 mod test {
     use super::{new, default, Authenticator, Base, AuthConfig};
 
