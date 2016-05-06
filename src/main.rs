@@ -1,11 +1,12 @@
 extern crate rand;
-
 extern crate crypto;
+extern crate chrono;
 
 mod google_auth;
 
 use std::env;
 use std::process;
+use chrono::{UTC};
 
 use google_auth::*;
 
@@ -16,10 +17,19 @@ fn main() {
         println!("Usage: google_auth KEY TIMESTAMP");
         process::exit(0);
     }
-    let key = args[1].to_string();
-    let timestamp = match args[2].parse::<u64>() {
+    let code = match args[2].parse::<u32>() {
         Ok(v) => v,
-        Err(e) => panic!("Could not parse {} into a number: {}", args[2], e),
+        Err(e) => panic!("Could not parse {} into a valid code: {}", args[2], e),
     };
-    //println!("Code: {}", calculate_code(&decode_key(key), timestamp));
+    let at_time =
+        if args.len() == 4 {
+            match args[3].parse::<i64>() {
+                Ok(v) => v,
+                Err(e) => panic!("Could not parse {} into a valid timestamp: {}", args[3], e),
+            }
+        } else {
+            UTC::now().timestamp()
+        };
+    println!("Code should be '{}' at T {}", google_auth::calculate_code(google_auth::decode_key(args[1].to_string()).as_slice(), at_time), at_time);
+    println!("Logged in: {}", google_auth::validate_code(AuthKey {key: args[1].clone()}, at_time, code));
 }
