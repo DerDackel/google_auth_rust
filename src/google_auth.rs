@@ -34,8 +34,6 @@ pub struct TOTPAuthenticator {
 pub trait Authenticator {
     fn create_credentials(&self) -> AuthKey;
     fn validate_code(&self, key: AuthKey, time: i64, code: u32) -> bool;
-    fn encode_secret_key(&self, buffer: Vec<u8>) -> String;
-    fn decode_secret_key(&self, key: String) -> Vec<u8>;
     fn calculate_code(&self, key: &[u8], time: i64) -> u32;
 }
 
@@ -48,15 +46,14 @@ impl Authenticator for TOTPAuthenticator {
         };
 
         let mut buffer: Vec<u8> = Vec::with_capacity((self.config.secret_bits/8) as usize);
-        //let mut buffer: [u8; (self.config.secret_bits as u32/5) as usize] = [0; (self.config.secret_bits/5) as usize];
         rng.fill_bytes(&mut buffer);
-        AuthKey {key: self.encode_secret_key(buffer)}
+        AuthKey {key: encode_secret_key(&self.config.base, buffer)}
     }
 
 
     fn validate_code(&self, key: AuthKey, time: i64, code: u32) -> bool {
         let window: i64 = self.config.window_size as i64;
-        let key_base = self.decode_secret_key(key.key);
+        let key_base = decode_secret_key(&self.config.base, key.key);
         let time_window = time / (self.config.window_timestep_size as i64);
         for i in -((window - 1)/2)..window / 2 {
             if self.calculate_code(key_base.as_slice(), time_window + i) == code {
@@ -64,24 +61,6 @@ impl Authenticator for TOTPAuthenticator {
             }
         }
         false
-    }
-
-    fn encode_secret_key(&self, buffer: Vec<u8>) -> String {
-        match self.config.base {
-            Base::BASE32 => base32::encode(base32::Alphabet::RFC4648 {padding: false}, buffer.as_slice()),
-            Base::BASE64 => String::from_utf8(base64::u8en(&buffer.as_slice()).unwrap()).unwrap()
-        }
-
-    }
-
-    fn decode_secret_key(&self, key: String) -> Vec<u8> {
-        match self.config.base {
-            Base::BASE32 => match base32::decode(base32::Alphabet::RFC4648 {padding: false}, &key) {
-                Some(v) => v,
-                None => panic!("Could not decode secret!"),
-            },
-            Base::BASE64 => base64::decode(&key).unwrap().into_bytes()
-        }
     }
 
     fn calculate_code(&self, key: &[u8], time: i64) -> u32 {
@@ -92,6 +71,27 @@ impl Authenticator for TOTPAuthenticator {
         let result = hmac.result();
         let hash: &[u8] = result.code();
         dyn_truncate(hash) % (10 as u32).pow(self.config.code_digits)
+    }
+}
+
+fn encode_secret_key(base: &Base, buffer: Vec<u8>) -> String {
+    match *base {
+        Base::BASE32 => base32::encode(base32::Alphabet::RFC4648 {padding: false}, buffer.as_slice()),
+        Base::BASE64 => String::from_utf8(base64::u8en(&buffer.as_slice()).unwrap()).unwrap()
+    }
+}
+
+fn decode_secret_key(base: &Base, key: String) -> Vec<u8> {
+    match *base {
+        Base::BASE32 => match base32::decode(base32::Alphabet::RFC4648 {padding: false}, &key) {
+            Some(v) => v,
+            None => panic!("Could not decode secret!"),
+        },
+        Base::BASE64 => match base64::decode(&key) {
+            Ok(k) => k.into_bytes(),
+            Err(e) => panic!("Could not decode secret: {}", e)
+        }
+
     }
 }
 
@@ -112,13 +112,13 @@ fn dyn_truncate(hash: &[u8]) -> u32 {
 
 #[cfg(test)]
 mod test {
-    use super::{new, default, Authenticator, Base, AuthConfig};
+    use super::{new, default, Authenticator, Base, AuthConfig, decode_secret_key};
 
     #[test]
     fn validate_code_should_work_sixty_seconds_with_default_settings() {
         let auth = default();
         let creds = auth.create_credentials();
-        let key_base = auth.decode_secret_key(creds.key.to_string());
+        let key_base = decode_secret_key(&auth.config.base, creds.key.to_string());
         let code = auth.calculate_code(key_base.as_slice(), 0);
         for i in 1..60 {
             assert!(auth.validate_code(creds.clone(), i, code));
@@ -130,7 +130,7 @@ mod test {
     fn validate_code_should_work_with_base64() {
         let auth = new(AuthConfig {secret_bits: 80, code_digits: 6, window_timestep_size: 30, window_size: 3, base: Base::BASE64});
         let creds = auth.create_credentials();
-        let key_base = auth.decode_secret_key(creds.key.to_string());
+        let key_base = decode_secret_key(&auth.config.base, creds.key.to_string());
         let code = auth.calculate_code(key_base.as_slice(), 0);
         for i in 1..60 {
             assert!(auth.validate_code(creds.clone(), i, code));
