@@ -114,7 +114,7 @@ fn decode_secret_key(base: Base, key: String) -> Result<Vec<u8>, Error> {
 }
 
 /// Creates a new Authenticator using the default settings used by Google Authenticator
-pub fn default() -> TOTPAuthenticator {
+pub fn with_defaults() -> TOTPAuthenticator {
     new(AuthConfig { secret_bits: 80, code_digits: 6, window_timestep_size: 30, window_size: 3, base: Base::BASE32})
 }
 
@@ -133,7 +133,7 @@ fn dyn_truncate(hash: &[u8]) -> u32 {
 #[cfg(test)]
 mod test {
     use time::Timespec;
-    use super::{new, default, Authenticator, Base, AuthConfig, decode_secret_key, encode_secret_key};
+    use super::{new, with_defaults, Authenticator, Base, AuthConfig, decode_secret_key, encode_secret_key};
 
     #[test]
     fn encode_secret_key_ten_chars_base32_should_yield_16_char_string() {
@@ -143,7 +143,7 @@ mod test {
 
     #[test]
     fn validate_code_should_work_sixty_seconds_with_default_settings() {
-        let auth = default();
+        let auth = with_defaults();
         let creds = auth.create_credentials();
         assert!(creds.key.len() == 16);
         let key_base = decode_secret_key(auth.config.base.clone(), creds.key.to_string()).unwrap();
