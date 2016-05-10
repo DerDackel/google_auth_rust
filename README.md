@@ -38,3 +38,8 @@ let auth_key = authenticator.create_credentials();
 let passcode: u32 = ... // read passcode from user
 println!("Correct code? : {}", authenticator.validate_code(auth_key, time::get_time(), passcode));
 ```
+
+Inspiration
+-----------
+
+I mostly relied on a Java implementation of TOTP available [here] (https://github.com/wstrange/GoogleAuth)
