@@ -16,8 +16,9 @@ It currently doesn't do
 -----------------------
 
 * Scratch codes
-* Probably f*ed up on Big Endian architectures, as I didn't 100% account for them
+* Probably f*ed up on Big Endian architectures, as I didn't really bother with them
 * Documentation
+* Proper unit tests
 
 Usage
 -----
