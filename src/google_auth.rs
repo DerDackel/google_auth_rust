@@ -1,5 +1,3 @@
-extern crate data_encoding;
-
 use rand::{OsRng, Rng};
 use std::mem::transmute;
 use std::u64;
@@ -7,9 +5,10 @@ use std::string::String;
 use crypto::hmac::Hmac;
 use crypto::sha1::Sha1;
 use crypto::mac::Mac;
-use self::data_encoding::base32;
-use self::data_encoding::base64;
-use self::data_encoding::decode::Error;
+use time::Timespec;
+use data_encoding::base32;
+use data_encoding::base64;
+use data_encoding::decode::Error;
 
 
 #[derive(Debug, Clone)]
@@ -52,7 +51,7 @@ pub trait Authenticator {
     fn create_credentials(&self) -> AuthKey;
 
     /// Validate a passcode against a given secret at a given time
-    fn validate_code(&self, key: AuthKey, time: i64, code: u32) -> bool;
+    fn validate_code(&self, key: AuthKey, time: Timespec, code: u32) -> bool;
 
     /// Calculate a passcode for a given key at a given timestamp
     fn calculate_code(&self, key: &[u8], time: i64) -> u32;
@@ -74,13 +73,13 @@ impl Authenticator for TOTPAuthenticator {
         AuthKey {key: auth_key}
     }
 
-    fn validate_code(&self, key: AuthKey, time: i64, code: u32) -> bool {
+    fn validate_code(&self, key: AuthKey, time: Timespec, code: u32) -> bool {
         let window: i64 = self.config.window_size as i64;
         let key_base = match decode_secret_key(self.config.base.clone(), key.key) {
             Ok(v) => v,
             Err(e) => panic!("Could not decode key: {}", e)
         };
-        let time_window = time / (self.config.window_timestep_size as i64);
+        let time_window = time.sec / (self.config.window_timestep_size as i64);
         for i in -((window - 1)/2)..window / 2 {
             if self.calculate_code(key_base.as_slice(), time_window + i) == code {
                 return true
@@ -133,6 +132,7 @@ fn dyn_truncate(hash: &[u8]) -> u32 {
 
 #[cfg(test)]
 mod test {
+    use time::Timespec;
     use super::{new, default, Authenticator, Base, AuthConfig, decode_secret_key, encode_secret_key};
 
     #[test]
@@ -149,9 +149,9 @@ mod test {
         let key_base = decode_secret_key(auth.config.base.clone(), creds.key.to_string()).unwrap();
         let code = auth.calculate_code(key_base.as_slice(), 0);
         for i in 1..60 {
-            assert!(auth.validate_code(creds.clone(), i, code));
+            assert!(auth.validate_code(creds.clone(), Timespec { sec: i, nsec: 0}, code));
         }
-        assert!(!auth.validate_code(creds.clone(), 61, code));
+        assert!(!auth.validate_code(creds.clone(), Timespec { sec: 61, nsec: 0}, code));
     }
 
     #[test]
@@ -162,8 +162,8 @@ mod test {
         let key_base = decode_secret_key(auth.config.base.clone(), creds.key.to_string()).unwrap();
         let code = auth.calculate_code(key_base.as_slice(), 0);
         for i in 1..60 {
-            assert!(auth.validate_code(creds.clone(), i, code));
+            assert!(auth.validate_code(creds.clone(), Timespec { sec: i, nsec: 0}, code));
         }
-        assert!(!auth.validate_code(creds.clone(), 61, code));
+        assert!(!auth.validate_code(creds.clone(), Timespec { sec: 61, nsec: 0}, code));
     }
 }

@@ -18,3 +18,22 @@ It currently doesn't do
 * Scratch codes
 * Probably f*ed up on Big Endian architectures, as I didn't 100% account for them
 * Documentation
+
+Usage
+-----
+
+```
+use google_auth::Authenticator;
+
+...
+
+// create authenticator with defaults
+let authenticator = google_auth::default()
+
+let auth_key = authenticator.create_credentials();
+
+...
+
+let passcode: u32 = ... // read passcode from user
+println!("Correct code? : {}", authenticator.validate_code(auth_key, time::get_time(), passcode));
+```
