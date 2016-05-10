@@ -23,6 +23,13 @@ pub enum Base {
     BASE64,
 }
 
+/// Holds the configuration parameters for TOTP authenticators
+///
+/// `secret_bits` hold the length of the secret key before encoding
+/// `code_digits` holds the length of the passcodes that are to be generated
+/// `window_timestep_size` holds the step size in which to proceed when validating a passcode within a time window
+/// `window size` holds the absolute size of the time window
+/// `base` holds whether the secret key is encoded using Base32 or Base64
 pub struct AuthConfig {
     secret_bits: u32,
     code_digits: u32,
@@ -31,13 +38,23 @@ pub struct AuthConfig {
     base: Base,
 }
 
+/// Base struct for a TOTP Authenticator.
+///
+/// Holds its `AuthConfig`, is constructed using the `new`
+/// method
 pub struct TOTPAuthenticator {
     pub config: AuthConfig
 }
 
+/// An Authenticator
 pub trait Authenticator {
+    /// Create a new set of credentials
     fn create_credentials(&self) -> AuthKey;
+
+    /// Validate a passcode against a given secret at a given time
     fn validate_code(&self, key: AuthKey, time: i64, code: u32) -> bool;
+
+    /// Calculate a passcode for a given key at a given timestamp
     fn calculate_code(&self, key: &[u8], time: i64) -> u32;
 }
 
@@ -56,7 +73,6 @@ impl Authenticator for TOTPAuthenticator {
         let auth_key = encode_secret_key(self.config.base.clone(), buffer);
         AuthKey {key: auth_key}
     }
-
 
     fn validate_code(&self, key: AuthKey, time: i64, code: u32) -> bool {
         let window: i64 = self.config.window_size as i64;
@@ -98,10 +114,12 @@ fn decode_secret_key(base: Base, key: String) -> Result<Vec<u8>, Error> {
     }
 }
 
+/// Creates a new Authenticator using the default settings used by Google Authenticator
 pub fn default() -> TOTPAuthenticator {
     new(AuthConfig { secret_bits: 80, code_digits: 6, window_timestep_size: 30, window_size: 3, base: Base::BASE32})
 }
 
+/// Creates a new Authenticator based on a provided configuration
 pub fn new(auth_config: AuthConfig) -> TOTPAuthenticator {
     TOTPAuthenticator { config: auth_config}
 }
